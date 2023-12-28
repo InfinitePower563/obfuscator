@@ -2,20 +2,24 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
 public class Main {
     public static void main(String[] args) {
         BuildSystemShort.putArgs(new BuildSystemShort.GradleArgs(args));
         BuildSystemShort.initializeGradle();
-        BuildSystemShort.runTask(Main::awt, "awt");
+        BuildSystemShort.putTasks(
+                new BuildSystemShort.GradleTask("awt", Main::awt),
+                new BuildSystemShort.GradleTask("obfuscate", Main::runObfuscation),
+                new BuildSystemShort.GradleTask("genMappings", Main::genMappings)
+        );
+        BuildSystemShort.runTask("awt");
     }
 
-    private static BuildSystemShort.GradleResult awt(BuildSystemShort.GradleArgs gArgs, Object[] args) {
+    public static BuildSystemShort.GradleResult awt(BuildSystemShort.GradleArgs gArgs, Object[] args) {
         BuildSystemShort.Logger logger = new BuildSystemShort.Logger("AWT", "AWT-Event-Loop");
         if (gArgs.containsFlag("silent")) {
             logger.setSilent(true);
@@ -31,6 +35,15 @@ public class Main {
         JLabel mappings = new JLabel("Mappings");
         mappings.setBounds(10, 10, 100, 100);
         frame.add(mappings);
+
+        JButton genMappings = new JButton("Generate Mappings");
+        genMappings.setBounds(10, 0, 200, 30);
+        genMappings.addActionListener((ae) -> {
+            BuildSystemShort.runTask("genMappings");
+            File mappingsFile = new File("default.mapping");
+            JOptionPane.showMessageDialog(frame, "Generated mappings file at " + mappingsFile.getAbsolutePath());
+        });
+        frame.add(genMappings);
 
         JButton mappingsButton = new JButton("(None)");
         mappingsButton.setBounds(10, 70, 250, 30);
@@ -87,7 +100,7 @@ public class Main {
                 return;
             }
 
-            BuildSystemShort.runTask(Main::runObfuscation, "obfuscate", BuildSystemShort.get(mappingLocation[0]), BuildSystemShort.get(fileLocation[0].get(0)));
+            BuildSystemShort.runTask("obfuscate", BuildSystemShort.get(mappingLocation[0]), BuildSystemShort.get(fileLocation[0].get(0)));
         });
         frame.add(obfuscate);
 
@@ -95,7 +108,6 @@ public class Main {
         frame.setVisible(true);
         return BuildSystemShort.GradleResult.SUCCESS;
     }
-
     public static BuildSystemShort.GradleResult runObfuscation(BuildSystemShort.GradleArgs gArgs, Object[] args) {
         File mappings = (File) args[0];
         LinkedFile file = (LinkedFile) args[1];
@@ -234,6 +246,76 @@ public class Main {
                 logger.err("Failed to write file " + file.getFile().getPath());
                 return BuildSystemShort.GradleResult.FAILURE;
             }
+        }
+
+        return BuildSystemShort.GradleResult.SUCCESS;
+    }
+    public static BuildSystemShort.GradleResult genMappings(BuildSystemShort.GradleArgs gArgs, Object[] args) {
+        ArrayList<String> classes, methods = new ArrayList<>(), fields = new ArrayList<>();
+        BuildSystemShort.Logger logger = new BuildSystemShort.Logger("mapping-gen", "daemon");
+        if (gArgs.containsFlag("silent")) {
+            logger.setSilent(true);
+        }
+        String classMappings = "Abrafoolery,Baffoonery,Cacklesnort,Dillydally,Eccentrico,Flibbertigibbet,Gadzookery,Higgledy,Impishness,Jibberish,Klutzilla,Loonytune,Mischiefmaker,Noodlehead,Oddballer,Peculiarity,Quirkitis,Razzmatazz,Shenanigans,Tizzyness,Uproarious,Vagabondia,Whimsydoodle,Xtravaganzo,Yokelicious,Zaniness,Alphabungle,Bizarro,Crazypants,Daffydilly,Euphoricness,Fandoodler,Goofatron,Haphazardly,Ickyfuddle,Jiggerypokery,Kookaburra,Lollapalooka,Muffindoodle,Ninkynonk,Oddityville,Pizzazzle,Quirkelot,Ragamuffin,Scatterbrain,Toodleloo,Umpitydoo,Vuvuzela,Wackadoo,Xylofun,Yabbadabbadoo,Zippitydoo,Abracadonkey,Ballywacky,Cacophunny,Ditzmeister,Eccentrix,Fiddledeedee,Gobbledygook,Hodgepodgical,Imbroglio,Jocularious,Kinkajou,Lollygagger,Muddlemania,Noodleoodle,Outlandish,Peculiarix,Quizzicality,Ridonculous,Snafu-erino,Twaddlepants,Unbelievabobble,Vexillological,Whatchamacallit,Xylophoneer,Yippee-yay,Zanytown,Anticsaurus,Bunkumbeast,Crazycopia,Daffydown,Eekonomics,Fandangled,Googlywoogly,Haphazardia,Impracticality,Jigglewiggle,Kookaboo,Lollygaggle,Mumbojumbo,Nincompoopia,Oopsy-doodle,Pizzazzler,Quirkyquest,Rambunctious,Scatterbrained,Topsy-turvy,Umpteenish,Vivaciousness,Wackadoodle,Xylographer,Yobbishness,Ziggityzoom,Abracadoofus,Ballyhooligan,Cackleberry,Dillydalloo,Eccentricity,Flibbertiflop,Gadzookster,Higgledy-piggledy,Imbecilical,Jibberjabber,Klutzoid,Loonatick,Mischievious,Noodlenerd,Oddbodkin,Peculiarness,Quirktastic,Razzleberry,Shenanigoober,Tizzytopia,Uproarish,Vagabondage,Whimsywick,Xtravaganzalot,Yakkityyak,Zanysaurus,Alphabetastic,Bizarrium,Crazymajig,Daffydoodah,Euphorication,Fandoodleberry,Goofballistic,Haplessaurus,Ickyfiddler,Jigglywiggly,Kookaburrico,Lollapalouza,Muffintastic,Ninkynoodle,Odditopia,Pizzazzleton,Quirkular,Razzledazzle,Scatterbrainer,Toodlemeister,Umptiddlyumptious,Vuvuzelicious,Wackadooey,Xylofunster,Yabbadabbadoodle,Zippitydoodah,Abrafoolish,Baffoonerific,Cacklesnicker,Dillydalliance,Eccentricular,Flibbertigobble,Gadzookmeister,Higgledoodle,Impishmallow,Jibberelish,Klutzilliant,Loonylala,Mischiefmancer,Noodlenaut,Oddbodacious,Peculiarious,Quirkador,Razzmatazzle,Shenaniguru,Tizzylala,Uproario,Vagabondoodle,Whimsywhirl,Xtravaganzador,Yokeliciousness,Zaninessence,Alphabungler,Bizarrotron,Crazypoppin,Daffydiddle,Euphoridic,Fandoodleicious,Goofatronix,Haphazarus,Ickyfuddler,Jigglypuffery,Kookabum,Lollapalookie,Muffindoodlery,Ninkynunkle,Oddityplicity,Pizzazzletonian,Quirkward,Razzmatazzy,Scatterbrainiac,Toodlemaniac,Umptastic,Vuvuzelation,Wackadoodler,Xylofuntime,Yabbadabbaloon,Zippitydoodler,Abracadonko";
+        classes = new ArrayList<>(Arrays.asList(classMappings.split(",")));
+        for (int i = 'A'; i <= 'z'; i++) {
+            for (int j = 1; j <= 25; j++) {
+                StringBuilder s = new StringBuilder();
+                for (int k = 0; k < j; k++) {
+                    s.append((char) i);
+                }
+                methods.add(s.toString());
+            }
+        }
+        char c = (char) (Math.random() * ('z' - 'a') + 'a');
+        for (int i = 0; i < 16; i++) {
+            for (int j = 0; j < 16; j++) {
+                for (int k = 0; k < 16; k++) {
+                    for (int l = 0; l < 16; l++) {
+                        fields.add(String.format("%c%c%c%c%c",
+                                c,
+                                (i > 9 ? (char) ('a' + i - 10) : (char) ('0' + i)),
+                                (j > 9 ? (char) ('a' + j - 10) : (char) ('0' + j)),
+                                (k > 9 ? (char) ('a' + k - 10) : (char) ('0' + k)),
+                                (l > 9 ? (char) ('a' + l - 10) : (char) ('0' + l))
+                        ));
+                    }
+                }
+            }
+        }
+        logger.info("Generated " + classes.size() + " class mappings.");
+        logger.info("Generated " + methods.size() + " method mappings.");
+        logger.info("Generated " + fields.size() + " field mappings.");
+
+        Collections.shuffle(classes);
+        Collections.shuffle(methods);
+        Collections.shuffle(fields);
+
+        File mappingsFile = new File("default.mapping");
+        if (mappingsFile.exists()) {
+            logger.warn("Mappings file already exists. Deleting...");
+            if (!mappingsFile.delete()) {
+                logger.warn("Failed to delete mappings file.");
+            }
+        }
+        try (PrintWriter writer = new PrintWriter(mappingsFile)) {
+            writer.println("CLASS");
+            for (String s : classes) {
+                writer.println(s);
+            }
+            writer.println("METHOD");
+            for (String s : methods) {
+                writer.println(s);
+            }
+            writer.println("FIELD");
+            for (int i = 0; i < fields.size() - 1; i++) {
+                writer.println(fields.get(i));
+            }
+            writer.print(fields.get(fields.size() - 1));
+            logger.info("Wrote mappings file at " + mappingsFile.getAbsolutePath());
+        } catch (IOException e) {
+            logger.err("Failed to write mappings file.");
+            return BuildSystemShort.GradleResult.FAILURE;
         }
 
         return BuildSystemShort.GradleResult.SUCCESS;

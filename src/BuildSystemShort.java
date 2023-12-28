@@ -1,12 +1,14 @@
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 public class BuildSystemShort {
     private static final Logger logger = new Logger("GradleMain", "main");
     private static GradleArgs args;
     private static final Object[] storage = new Object[1024];
+    private static final ArrayList<GradleTask> tasks = new ArrayList<>();
+
     public static class Logger {
         private static final String RESET = "\u001B[0m";
         private static final String RED = "\u001B[31m";
@@ -148,18 +150,50 @@ public class BuildSystemShort {
     public enum GradleResult {
         SUCCESS,FAILURE,SKIPPED,FATAL_FAIL
     }
-    public static class Utils {
-        public static String trimLast(String s) {
-            StringBuilder accumulator = new StringBuilder();
-            for (int i = s.length() - 1; i >= 0; i--) {
-                if (s.charAt(i) != ' ' || s.charAt(i) == '\n' || s.charAt(i) == '\t') {
-                    accumulator.append(s.charAt(i));
-                }
-            }
-            return accumulator.reverse().toString();
+    public static class GradleTask {
+        public static final GradleTask[] defaultTasks = {
+                new GradleTask(
+                        "help",
+                        (gArgs, args) -> {
+                            logger.info("Running Gradle version v8.5 (latest)");
+                            logger.info("With daemon version STABLE-LATEST");
+                            logger.info("Running Gradle with BuildSystemShort, will only run runClient() as defined in build.gradle");
+                            logger.info("NOTE: Please run compiled sources with --self-impl to ensure proper functionality.");
+                            return GradleResult.SUCCESS;
+                        }
+                ),
+                new GradleTask(
+                        "prepareKotlinBuildScriptModel",
+                        (gArgs, args) -> {
+                            logger.info("All indexes are up to date.");
+                            return GradleResult.SKIPPED;
+                        }
+                )
+        };
+        private final String name;
+        private final BiFunction<GradleArgs, Object[], GradleResult> task;
+        public GradleTask(String name, BiFunction<GradleArgs, Object[], GradleResult> task) {
+            this.name = name;
+            this.task = task;
+        }
+        public String getName() {
+            return this.name;
+        }
+        public GradleResult run(Object... args) {
+            return this.task.apply(BuildSystemShort.args, args);
         }
     }
 
+
+    public static void putTasks(GradleTask... tasks) {
+        //make sure build.gradle exists
+        if (!new File("build.gradle").exists()) {
+            logger.err("build.gradle not found!");
+            System.exit(1);
+        }
+        BuildSystemShort.tasks.addAll(Arrays.asList(tasks));
+        BuildSystemShort.tasks.addAll(Arrays.asList(GradleTask.defaultTasks));
+    }
 
     public static void putArgs(GradleArgs args) {
         BuildSystemShort.args = args;
@@ -195,7 +229,7 @@ public class BuildSystemShort {
         logger.info(":initialize SKIPPED");
         logger.info("Task :initialize done.");
     }
-    public static void runTask(BiFunction<GradleArgs, Object[], GradleResult> task, String taskName, Object... args) {
+    private static void runTask(BiFunction<GradleArgs, Object[], GradleResult> task, String taskName, Object... args) {
         logger.info(":" + taskName);
         switch (task.apply(BuildSystemShort.args, args)) {
             case SUCCESS:
@@ -211,6 +245,15 @@ public class BuildSystemShort {
                 logger.info("Task :" + taskName + " SKIPPED");
                 break;
         }
+    }
+    public static void runTask(String name, Object... args) {
+        for (GradleTask task : tasks) {
+            if (task.getName().equals(name)) {
+                runTask(task.task, task.getName(), args);
+                return;
+            }
+        }
+        logger.err("Task " + name + " not found.");
     }
 
     private static int[] asPtr(int a) {

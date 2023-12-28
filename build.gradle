@@ -1,0 +1,24 @@
+//some basic setup
+project.version = "1.1"
+
+loadDefaultGradle()
+loadVersion(GradleVersion.LATEST)
+loadArchitecture(GradleVersion.SHORT)
+loadKotlinVersion(GradleVersion.KOTLIN_LATEST)
+localBuildSystem(BuildSystemShort.class)
+
+// Define some tasks
+initialize {
+    BuildSystemShort.initializeGradle()
+}
+awt {
+    Main.awt
+}
+runClient {
+    compile()
+    initialize()
+    awt()
+}
+genMappings {
+    Main.genMappings()
+}
