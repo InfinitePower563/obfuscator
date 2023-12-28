@@ -130,12 +130,8 @@ public class Main {
             mappingsContents = Files.readAllLines(mappings.toPath());
 
             fileContents.add(Files.readAllLines(file.getFile().toPath()));
-            if (file.next != -1) {
-                LinkedFile currentFile = (LinkedFile) BuildSystemShort.get(file.next);
-                while (currentFile.next != -1) {
-                    fileContents.add(Files.readAllLines(currentFile.getFile().toPath()));
-                    currentFile = (LinkedFile) BuildSystemShort.get(currentFile.next);
-                }
+            for (int i = file.next; i != -1; i = ((LinkedFile) BuildSystemShort.get(i)).next) {
+                fileContents.add(Files.readAllLines(((LinkedFile) BuildSystemShort.get(i)).getFile().toPath()));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -176,10 +172,31 @@ public class Main {
         int currentClassIndex = 0, currentMethodIndex = 0, currentFieldIndex = 0;
         HashMap<String, String> mapping = new HashMap<>();
         ArrayList<ArrayList<String>> newFileContents = new ArrayList<>();
+        logger.info("Creating mappings for " + fileContents.size() + " files.");
         //First create mappings
         for (List<String> f : fileContents) {
+            boolean override = false;
+            boolean inMethod = false;
+            int braceCounter = 0;
             for (String s : f) {
                 String trimmed = s.trim();
+                if (trimmed.contains("@Override")) {
+                    override = true;
+                    continue;
+                }
+                if (override) {
+                    override = false;
+                    continue;
+                }
+                if (inMethod && trimmed.contains("{")) {
+                    braceCounter++;
+                }
+                if (inMethod && trimmed.contains("}")) {
+                    braceCounter--;
+                    if (braceCounter == 0) {
+                        inMethod = false;
+                    }
+                }
                 if (trimmed.startsWith("public class ")) {
                     logger.info("Found class " + trimmed.substring("public class ".length()));
                     String without = trimmed.substring("public class ".length());
@@ -198,6 +215,16 @@ public class Main {
                         return BuildSystemShort.GradleResult.FAILURE;
                     }
                     mapping.put(methodName, methodNames.get(currentMethodIndex++));
+                    inMethod = true;
+                }
+                if (trimmed.matches("^\\w+ \\w+( = | =|= |=)\\w+.+$") && inMethod) {
+                    String without = trimmed.substring(0, trimmed.indexOf("="));
+                    String fieldName = without.substring(without.lastIndexOf(" ") + 1);
+                    if (currentFieldIndex + 1 > fieldNames.size() - 1) {
+                        logger.err("Mappings file does not contain enough field mappings.");
+                        return BuildSystemShort.GradleResult.FAILURE;
+                    }
+                    mapping.put(fieldName, fieldNames.get(currentFieldIndex++));
                 }
                 if (trimmed.matches("^\t*(public|private|protected|)( static|static|)( final|final|)( \\w+|\\w+) \\w+;$")) {
                     if (trimmed.startsWith("public static void main(")) continue;
@@ -212,7 +239,6 @@ public class Main {
             }
         }
         logger.info("Created " + mapping.size() + " mappings.");
-        //now replace
         for (List<String> f : fileContents) {
             ArrayList<String> newFile = new ArrayList<>();
             for (String s : f) {
@@ -225,7 +251,6 @@ public class Main {
             newFileContents.add(newFile);
         }
         logger.info("Replaced all mappings.");
-        //now write
         for (ArrayList<String> f: newFileContents) {
             try {
                 String className = null;

@@ -1,0 +1,1 @@
+zip -r Obfuscator-GradleShort-LATEST.zip build.gradle src/BuildSystemShort.java src/Main.java
