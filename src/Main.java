@@ -50,6 +50,7 @@ public class Main {
         mappingsButton.addActionListener((ae) -> {
             JFileChooser mappingsChooser = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("Mappings (.mapping)", "mapping");
+            mappingsChooser.setCurrentDirectory(new File("build.gradle"));
             mappingsChooser.setFileFilter(filter);
 
             if (mappingsChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
@@ -68,6 +69,7 @@ public class Main {
         fileButton.addActionListener((ae) -> {
             JFileChooser fileChooser = new JFileChooser();
             FileNameExtensionFilter filter = new FileNameExtensionFilter("Java File (.java)", "java");
+            fileChooser.setCurrentDirectory(new File("build.gradle"));
             fileChooser.setFileFilter(filter);
             fileChooser.setMultiSelectionEnabled(true);
 
