@@ -101,6 +101,7 @@ public class Main {
             }
 
             BuildSystemShort.runTask("obfuscate", BuildSystemShort.get(mappingLocation[0]), BuildSystemShort.get(fileLocation[0].get(0)));
+            JOptionPane.showMessageDialog(frame, "Obfuscated files.");
         });
         frame.add(obfuscate);
 
@@ -197,6 +198,9 @@ public class Main {
                         inMethod = false;
                     }
                 }
+                if (trimmed.contains("return")) {
+                    continue;
+                }
                 if (trimmed.startsWith("public class ")) {
                     logger.info("Found class " + trimmed.substring("public class ".length()));
                     String without = trimmed.substring("public class ".length());
@@ -206,24 +210,28 @@ public class Main {
                         return BuildSystemShort.GradleResult.FAILURE;
                     }
                     mapping.put(className, classNames.get(currentClassIndex++));
+                    continue;
                 }
-                if (trimmed.matches("^\t*(public|private|protected|)( static|static|)( void|void| \\w+) \\w+(\\([\\w|\\s]*\\)).*$")) {
+                if (trimmed.matches("^(public|private|protected|)( static|static|)( void|void| \\w+) \\w+(\\(.*\\)).*$")) {
                     String without = trimmed.substring(0, trimmed.indexOf("("));
                     String methodName = without.substring(without.lastIndexOf(" ") + 1);
                     if (currentMethodIndex + 1 > methodNames.size() - 1) {
                         logger.err("Mappings file does not contain enough method mappings.");
                         return BuildSystemShort.GradleResult.FAILURE;
                     }
+                    logger.info("Found method \"" + methodName + "\" from line " + trimmed);
                     mapping.put(methodName, methodNames.get(currentMethodIndex++));
                     inMethod = true;
+                    continue;
                 }
                 if (trimmed.matches("^\\w+ \\w+( = | =|= |=)\\w+.+$") && inMethod) {
-                    String without = trimmed.substring(0, trimmed.indexOf("="));
+                    String without = trimmed.substring(0, trimmed.indexOf("=")).trim();
                     String fieldName = without.substring(without.lastIndexOf(" ") + 1);
                     if (currentFieldIndex + 1 > fieldNames.size() - 1) {
                         logger.err("Mappings file does not contain enough field mappings.");
                         return BuildSystemShort.GradleResult.FAILURE;
                     }
+                    logger.info("Found variable \"" + fieldName + "\" from line: " + without);
                     mapping.put(fieldName, fieldNames.get(currentFieldIndex++));
                 }
                 if (trimmed.matches("^\t*(public|private|protected|)( static|static|)( final|final|)( \\w+|\\w+) \\w+;$")) {
@@ -234,11 +242,16 @@ public class Main {
                         logger.err("Mappings file does not contain enough field mappings.");
                         return BuildSystemShort.GradleResult.FAILURE;
                     }
+                    logger.info("Found field \"" + fieldName + " from line \"" + trimmed);
                     mapping.put(fieldName, fieldNames.get(currentFieldIndex++));
                 }
             }
         }
-        logger.info("Created " + mapping.size() + " mappings.");
+
+        logger.info("Created " + mapping.size() + " mappings:");
+        for (String key : mapping.keySet()) {
+            logger.info(key + " -> " + mapping.get(key));
+        }
         for (List<String> f : fileContents) {
             ArrayList<String> newFile = new ArrayList<>();
             for (String s : f) {
