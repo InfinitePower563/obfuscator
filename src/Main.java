@@ -147,9 +147,11 @@ public class Main {
         ArrayList<String>
                 classNames = new ArrayList<>(),
                 methodNames = new ArrayList<>(),
-                fieldNames = new ArrayList<>();
+                fieldNames = new ArrayList<>(),
+                deadCode = new ArrayList<>();
 
         String currentType = "";
+        StringBuilder deadCodeBuilder = new StringBuilder();
         for (String line : mappingsContents) {
             if (line.startsWith("CLASS")) {
                 currentType = "CLASS";
@@ -157,6 +159,8 @@ public class Main {
                 currentType = "METHOD";
             } else if (line.startsWith("FIELD")) {
                 currentType = "FIELD";
+            } else if (line.startsWith("DEADCODE")) {
+                currentType = "DEADCODE";
             } else {
                 switch (currentType) {
                     case "CLASS":
@@ -167,6 +171,14 @@ public class Main {
                         break;
                     case "FIELD":
                         fieldNames.add(line);
+                        break;
+                    case "DEADCODE":
+                        if (line.equals("3pu4xF2Uqof55GplgL06Bw8Ip8tNwX")) {
+                            deadCode.add(deadCodeBuilder.toString());
+                            deadCodeBuilder = new StringBuilder();
+                            break;
+                        }
+                        deadCodeBuilder.append(line).append("\n");
                         break;
                 }
             }
@@ -257,12 +269,37 @@ public class Main {
         for (String key : mapping.keySet()) {
             logger.info(key + " -> " + mapping.get(key));
         }
+        int deadCodePointer = 0;
         for (List<String> f : fileContents) {
             ArrayList<String> newFile = new ArrayList<>();
+            boolean inClass = false;
+            int braceCounter = 0;
             for (String s : f) {
                 String t = s;
+                String trimmed = s.trim();
+                if (inClass && trimmed.contains("{")) {
+                    braceCounter++;
+                }
+                if (inClass && trimmed.contains("}")) {
+                    braceCounter--;
+                    if (braceCounter == -1) {
+                        inClass = false;
+                    }
+                }
+                if (trimmed.contains("class")) {
+                    inClass = true;
+                }
                 for (String key : mapping.keySet()) {
                     t = t.replaceAll(key, mapping.get(key));
+                }
+                if (inClass && braceCounter == 0 && s.contains("}") && Math.random() > 0.75d) {
+                    logger.info("Adding dead code snippet.");
+                    newFile.add(t);
+                    String deadCodeSnippet = deadCode.get(deadCodePointer++);
+                    for (String line : deadCodeSnippet.split("\n")) {
+                        newFile.add("\t" + line);
+                    }
+                    continue;
                 }
                 newFile.add(t);
             }
@@ -294,12 +331,108 @@ public class Main {
         return BuildSystemShort.GradleResult.SUCCESS;
     }
     public static BuildSystemShort.GradleResult genMappings(BuildSystemShort.GradleArgs gArgs, Object[] args) {
-        ArrayList<String> classes, methods = new ArrayList<>(), fields = new ArrayList<>();
+        ArrayList<String> classes, methods = new ArrayList<>(), fields = new ArrayList<>(), deadCode;
         BuildSystemShort.Logger logger = new BuildSystemShort.Logger("mapping-gen", "daemon");
         if (gArgs.containsFlag("silent")) {
             logger.setSilent(true);
         }
         String classMappings = "Abrafoolery,Baffoonery,Cacklesnort,Dillydally,Eccentrico,Flibbertigibbet,Gadzookery,Higgledy,Impishness,Jibberish,Klutzilla,Loonytune,Mischiefmaker,Noodlehead,Oddballer,Peculiarity,Quirkitis,Razzmatazz,Shenanigans,Tizzyness,Uproarious,Vagabondia,Whimsydoodle,Xtravaganzo,Yokelicious,Zaniness,Alphabungle,Bizarro,Crazypants,Daffydilly,Euphoricness,Fandoodler,Goofatron,Haphazardly,Ickyfuddle,Jiggerypokery,Kookaburra,Lollapalooka,Muffindoodle,Ninkynonk,Oddityville,Pizzazzle,Quirkelot,Ragamuffin,Scatterbrain,Toodleloo,Umpitydoo,Vuvuzela,Wackadoo,Xylofun,Yabbadabbadoo,Zippitydoo,Abracadonkey,Ballywacky,Cacophunny,Ditzmeister,Eccentrix,Fiddledeedee,Gobbledygook,Hodgepodgical,Imbroglio,Jocularious,Kinkajou,Lollygagger,Muddlemania,Noodleoodle,Outlandish,Peculiarix,Quizzicality,Ridonculous,Snafu-erino,Twaddlepants,Unbelievabobble,Vexillological,Whatchamacallit,Xylophoneer,Yippee-yay,Zanytown,Anticsaurus,Bunkumbeast,Crazycopia,Daffydown,Eekonomics,Fandangled,Googlywoogly,Haphazardia,Impracticality,Jigglewiggle,Kookaboo,Lollygaggle,Mumbojumbo,Nincompoopia,Oopsy-doodle,Pizzazzler,Quirkyquest,Rambunctious,Scatterbrained,Topsy-turvy,Umpteenish,Vivaciousness,Wackadoodle,Xylographer,Yobbishness,Ziggityzoom,Abracadoofus,Ballyhooligan,Cackleberry,Dillydalloo,Eccentricity,Flibbertiflop,Gadzookster,Higgledy-piggledy,Imbecilical,Jibberjabber,Klutzoid,Loonatick,Mischievious,Noodlenerd,Oddbodkin,Peculiarness,Quirktastic,Razzleberry,Shenanigoober,Tizzytopia,Uproarish,Vagabondage,Whimsywick,Xtravaganzalot,Yakkityyak,Zanysaurus,Alphabetastic,Bizarrium,Crazymajig,Daffydoodah,Euphorication,Fandoodleberry,Goofballistic,Haplessaurus,Ickyfiddler,Jigglywiggly,Kookaburrico,Lollapalouza,Muffintastic,Ninkynoodle,Odditopia,Pizzazzleton,Quirkular,Razzledazzle,Scatterbrainer,Toodlemeister,Umptiddlyumptious,Vuvuzelicious,Wackadooey,Xylofunster,Yabbadabbadoodle,Zippitydoodah,Abrafoolish,Baffoonerific,Cacklesnicker,Dillydalliance,Eccentricular,Flibbertigobble,Gadzookmeister,Higgledoodle,Impishmallow,Jibberelish,Klutzilliant,Loonylala,Mischiefmancer,Noodlenaut,Oddbodacious,Peculiarious,Quirkador,Razzmatazzle,Shenaniguru,Tizzylala,Uproario,Vagabondoodle,Whimsywhirl,Xtravaganzador,Yokeliciousness,Zaninessence,Alphabungler,Bizarrotron,Crazypoppin,Daffydiddle,Euphoridic,Fandoodleicious,Goofatronix,Haphazarus,Ickyfuddler,Jigglypuffery,Kookabum,Lollapalookie,Muffindoodlery,Ninkynunkle,Oddityplicity,Pizzazzletonian,Quirkward,Razzmatazzy,Scatterbrainiac,Toodlemaniac,Umptastic,Vuvuzelation,Wackadoodler,Xylofuntime,Yabbadabbaloon,Zippitydoodler,Abracadonko";
+        //credit: ChatGPT for generating these
+        String deadCodes = "public static float m0x1ab7f(double[] doubleArray_p0x9b2e1c, int intValue_p0x5f84ea, String str_p0xbdc310) {\n" +
+                "    return (float) Arrays.stream(doubleArray_p0x9b2e1c)\n" +
+                "            .filter(d -> d > intValue_p0x5f84ea)\n" +
+                "            .sum();\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "protected int m0x0d3e8a(int intValue_p0xf296a5, String str_p0x4789b6, float floatValue_p0xe3fb92) {\n" +
+                "    int[] randomArray_p0xabc123 = new int[intValue_p0xf296a5];\n" +
+                "    for (int i = 0; i < randomArray_p0xabc123.length; i++) {\n" +
+                "        randomArray_p0xabc123[i] = (int) (Math.random() * intValue_p0xf296a5);\n" +
+                "    }\n" +
+                "    int sum = 0;\n" +
+                "    for (int num : randomArray_p0xabc123) {\n" +
+                "        if (num % 2 == 0) {\n" +
+                "            sum += num;\n" +
+                "        }\n" +
+                "    }\n" +
+                "    return sum;\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "double m0x287fbc(float floatValue_p0x7e23d9, int intValue_p0xa0d7b8, String str_p0x4c51e9, double[] doubleArray_p0x3d6f2b) {\n" +
+                "    double result = 0;\n" +
+                "    int index = intValue_p0xa0d7b8;\n" +
+                "    while (index >= 0) {\n" +
+                "        result += Math.sqrt(doubleArray_p0x3d6f2b[index--]);\n" +
+                "    }\n" +
+                "    return result;\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "public static String m0x5fe123(float floatValue_p0xdab909, int intValue_p0x1c3b4f, String str_p0x8e96d7) {\n" +
+                "    String[] randomStrings_p0x987654 = new String[intValue_p0x1c3b4f];\n" +
+                "    for (int i = 0; i < randomStrings_p0x987654.length; i++) {\n" +
+                "        randomStrings_p0x987654[i] = str_p0x8e96d7 + i;\n" +
+                "    }\n" +
+                "    StringBuilder result = new StringBuilder();\n" +
+                "    for (String s : randomStrings_p0x987654) {\n" +
+                "        result.append(s).append(\" \");\n" +
+                "    }\n" +
+                "    return result.toString();\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "protected double m0x9af7b8(int intValue_p0x2d18c5, String str_p0x5bfe12, float floatValue_p0x1a7f3b) {\n" +
+                "    int size = intValue_p0x2d18c5 % 5 + 1;\n" +
+                "    double[] randomDoubles_p0x789abc = new double[size];\n" +
+                "    Arrays.fill(randomDoubles_p0x789abc, floatValue_p0x1a7f3b);\n" +
+                "    return Arrays.stream(randomDoubles_p0x789abc).sum();\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "public static int m0x6bc9a5(double[] doubleArray_p0x1e7b39, int intValue_p0x8f4e26, String str_p0x03d29f) {\n" +
+                "    int[] randomArray_p0xa1b2c3 = new int[intValue_p0x8f4e26];\n" +
+                "    for (int i = 0; i < randomArray_p0xa1b2c3.length; i++) {\n" +
+                "        randomArray_p0xa1b2c3[i] = (int) (Math.random() * intValue_p0x8f4e26);\n" +
+                "    }\n" +
+                "    int count = 0;\n" +
+                "    for (int num : randomArray_p0xa1b2c3) {\n" +
+                "        if (num % 3 == 0) {\n" +
+                "            count++;\n" +
+                "        }\n" +
+                "    }\n" +
+                "    return count;\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "String m0x4d9e7f(float floatValue_p0x6e3b71, int intValue_p0x0a95b6, String str_p0x2f186c, double[] doubleArray_p0x45f7ae) {\n" +
+                "    int index = 0;\n" +
+                "    StringBuilder result = new StringBuilder();\n" +
+                "    do {\n" +
+                "        result.append(doubleArray_p0x45f7ae[index++]).append(\" \");\n" +
+                "    } while (index < doubleArray_p0x45f7ae.length && index % 2 == 0);\n" +
+                "    return result.toString();\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "protected float m0x8b3e2f(int intValue_p0x56d92a, String str_p0x1e8d3f, float floatValue_p0x9c7b3a) {\n" +
+                "    float[] randomFloats_p0xd8e9f2 = new float[intValue_p0x56d92a];\n" +
+                "    Arrays.fill(randomFloats_p0xd8e9f2, floatValue_p0x9c7b3a);\n" +
+                "    float sum = 0;\n" +
+                "    for (float f : randomFloats_p0xd8e9f2) {\n" +
+                "        if (f > 0) {\n" +
+                "            sum += Math.sqrt(f);\n" +
+                "        }\n" +
+                "    }\n" +
+                "    return sum;\n" +
+                "}\n" +
+                "3pu4xF2Uqof55GplgL06Bw8Ip8tNwX\n" +
+                "public static double m0x3f6b1d(float floatValue_p0x4a9b0e, int intValue_p0x3e7a1b, String str_p0x5c8d4e) {\n" +
+                "    double[] randomDoubles_p0xf0e1d2 = new double[intValue_p0x3e7a1b];\n" +
+                "    for (int i = 0; i < randomDoubles_p0xf0e1d2.length; i++) {\n" +
+                "        randomDoubles_p0xf0e1d2[i] = Math.pow(floatValue_p0x4a9b0e, i);\n" +
+                "    }\n" +
+                "    double product = 1;\n" +
+                "    for (double d : randomDoubles_p0xf0e1d2) {\n" +
+                "        product *= d;\n" +
+                "    }\n" +
+                "    return product;\n" +
+                "}";
+
         classes = new ArrayList<>(Arrays.asList(classMappings.split(",")));
         for (int i = 'A'; i <= 'Z'; i++) {
             for (int j = 1; j <= 25; j++) {
@@ -310,15 +443,23 @@ public class Main {
                 methods.add(s.toString());
             }
         }
-        for (int i = 'a'; i <= 'z'; i++) {
-            for (int j = 1; j <= 25; j++) {
-                StringBuilder s = new StringBuilder();
-                for (int k = 0; k < j; k++) {
-                    s.append((char) i);
-                }
-                methods.add(s.toString());
+        logger.info("Generated class mappings.");
+        //format: m0x + 6 random hex digits
+        for (int i = 0; i < 10000; i++) {
+            StringBuilder s = new StringBuilder("m0x");
+            for (int j = 0; j < 6; j++) {
+                s.append((char) (Math.random() * ('f' - 'a') + 'a'));
             }
+            while (methods.contains(s.toString())) {
+                s = new StringBuilder("m0x");
+                for (int j = 0; j < 6; j++) {
+                    s.append((char) (Math.random() * ('f' - 'a') + 'a'));
+                }
+            }
+            methods.add(s.toString());
+            if (i % 1000 == 0) logger.info("Generated " + (i) + " method mappings.");
         }
+        logger.info("Generated method mappings.");
         char c = (char) (Math.random() * ('z' - 'a') + 'a');
         for (int i = 0; i < 16; i++) {
             for (int j = 0; j < 16; j++) {
@@ -335,9 +476,13 @@ public class Main {
                 }
             }
         }
+        logger.info("Generated field snippets.");
+        deadCode = new ArrayList<>(Arrays.asList(deadCodes.split("3pu4xF2Uqof55GplgL06Bw8Ip8tNwX")));
+
         logger.info("Generated " + classes.size() + " class mappings.");
         logger.info("Generated " + methods.size() + " method mappings.");
         logger.info("Generated " + fields.size() + " field mappings.");
+        logger.info("Generated " + deadCode.size() + " dead code snippets.");
 
         Collections.shuffle(classes);
         Collections.shuffle(methods);
@@ -360,10 +505,14 @@ public class Main {
                 writer.println(s);
             }
             writer.println("FIELD");
-            for (int i = 0; i < fields.size() - 1; i++) {
+            for (int i = 0; i < fields.size(); i++) {
                 writer.println(fields.get(i));
             }
-            writer.print(fields.get(fields.size() - 1));
+            writer.println("DEADCODE\n3pu4xF2Uqof55GplgL06Bw8Ip8tNwX");
+            for (String s : deadCode) {
+                writer.println(s);
+                writer.println("3pu4xF2Uqof55GplgL06Bw8Ip8tNwX");
+            }
             logger.info("Wrote mappings file at " + mappingsFile.getAbsolutePath());
         } catch (IOException e) {
             logger.err("Failed to write mappings file.");
