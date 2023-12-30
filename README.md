@@ -10,4 +10,4 @@ this is a simple obfuscator I made for school
 6. Run `Main.java`.
 7. If you need to, press the generate mappings button and put the mappings file into the target folder.
 8. Follow GUI instructions.
-9. Pay attention to the console; the files that are generated will be mixed in with the source files.
+9. Generated files will be in a new folder.

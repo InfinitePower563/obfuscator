@@ -295,7 +295,7 @@ public class Main {
                     t = t.replaceAll(key, mapping.get(key));
                 }
                 if (inClass && braceCounter == 0 && s.contains("}") && Math.random() > 0.75d) {
-                    logger.info("Adding dead code snippet.");
+                    logger.info("Wrote dead code snippet.");
                     newFile.add(t);
                     String deadCodeSnippet = deadCode.get(deadCodePointer++);
                     for (String line : deadCodeSnippet.split("\n")) {
@@ -308,6 +308,20 @@ public class Main {
             newFileContents.add(newFile);
         }
         logger.info("Replaced all mappings.");
+
+        //create a new directory
+        File newDir = new File(file.getFile().getParentFile(), "out");
+        if (newDir.exists()) {
+            logger.warn("Output directory already exists. Deleting...");
+            if (!newDir.delete()) {
+                logger.warn("Failed to delete output directory.");
+            }
+        }
+        if (!newDir.mkdir()) {
+            logger.err("Failed to create output directory.");
+            return BuildSystemShort.GradleResult.FAILURE;
+        }
+
         for (ArrayList<String> f: newFileContents) {
             try {
                 String className = null;
@@ -322,7 +336,7 @@ public class Main {
                     logger.err("Failed to find class name.");
                     return BuildSystemShort.GradleResult.FAILURE;
                 }
-                Files.write(new File(file.getFile().getParentFile(), className + ".java").toPath(), f);
+                Files.write(new File(newDir, className + ".java").toPath(), f);
                 logger.info("Wrote " + className + ".java");
             } catch (IOException e) {
                 logger.err("Failed to write file " + file.getFile().getPath());
@@ -387,7 +401,6 @@ public class Main {
 
         String delimiterLine = deadCodes.split("\n")[0];
         String d = delimiterLine.substring(2);
-        System.out.println("Delimiter: " + d);
         String[] excludingFirstLine = deadCodes.split("\n");
         excludingFirstLine[0] = "";
         deadCodes = String.join("\n", excludingFirstLine);
@@ -419,8 +432,8 @@ public class Main {
                 writer.println(s);
             }
             writer.println("FIELD");
-            for (int i = 0; i < fields.size(); i++) {
-                writer.println(fields.get(i));
+            for (String field : fields) {
+                writer.println(field);
             }
             writer.println("DEADCODE\n3pu4xF2Uqof55GplgL06Bw8Ip8tNwX");
             for (String s : deadCode) {
@@ -437,16 +450,18 @@ public class Main {
     }
     private static String fetchClasses() {
         BuildSystemShort.Logger logger = new BuildSystemShort.Logger("net-coro", "coroutines");
+        logger.info(":runClient :coroutines :fetchClasses");
         logger.info("Fetching classes from CDN...");
         try {
-            URL cdn = new URL("https://verbose-spoon.s3.amazonaws.com/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ/classes.txt");
-            logger.info("CDN -> verbose-spoon.s3.amazonaws.com/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ");
+            URL cdn = new URL("https://d3n9s55goxa3h4.cloudfront.net/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ/classes.txt");
+            logger.info("CDN -> https://d3n9s55goxa3h4.cloudfront.net/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakO");
             StringBuilder s = new StringBuilder();
             Scanner scanner = new Scanner(cdn.openStream());
             while (scanner.hasNextLine()) {
                 s.append(scanner.nextLine()).append("\n");
             }
             logger.info("Fetched " + s.toString().split("\n").length + " lines.");
+            logger.info(":runClient :coroutines :fetchClasses DONE");
             return s.toString();
         } catch (IOException e) {
             logger.err("Failed to fetch classes.");
@@ -455,16 +470,18 @@ public class Main {
     }
     private static String fetchMethods() {
         BuildSystemShort.Logger logger = new BuildSystemShort.Logger("net-coro", "coroutines");
-        logger.info("Fetching classes from CDN...");
+        logger.info(":runClient :coroutines :fetchMethods");
+        logger.info("Fetching methods from CDN...");
         try {
-            URL cdn = new URL("https://verbose-spoon.s3.amazonaws.com/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ/methods.txt");
-            logger.info("CDN -> verbose-spoon.s3.amazonaws.com/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ");
+            URL cdn = new URL("https://d3n9s55goxa3h4.cloudfront.net/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ/methods.txt");
+            logger.info("CDN -> https://d3n9s55goxa3h4.cloudfront.net/cdn/RmCB7dXLfCehQRqGpvZUIjTh6gomakOQ");
             StringBuilder s = new StringBuilder();
             Scanner scanner = new Scanner(cdn.openStream());
             while (scanner.hasNextLine()) {
                 s.append(scanner.nextLine()).append("\n");
             }
             logger.info("Fetched " + s.toString().split("\n").length + " lines.");
+            logger.info(":runClient :coroutines :fetchMethods DONE");
             return s.toString();
         } catch (IOException e) {
             logger.err("Failed to fetch classes.");
